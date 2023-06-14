@@ -1,15 +1,22 @@
 import os
 
 from rest_framework.views import APIView
-# Create your views here.
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.viewsets import ViewSet
+from django.contrib.auth import authenticate
+from myapp.utils import get_tokens_for_user
+from rest_framework import status
+from .serializers import LoginSerializer, UserSerializer
+from .models import User
+from django.contrib.auth.hashers import make_password
 
 load_dotenv()
 
+# Create your views here.
 def divide_time_slots(start_time, end_time, time_difference):
     slots = []
     current_time = start_time
@@ -19,6 +26,35 @@ def divide_time_slots(start_time, end_time, time_difference):
         current_time += timedelta(minutes=time_difference)
     slots.append(end_time)
     return slots
+
+
+class LoginApiView(APIView):
+    authentication_classes = []
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        print(request.data)
+        if serializer.is_valid():
+            username = serializer.validated_data["username"]
+            password = serializer.validated_data["password"]
+            print("query ===>", User.objects.filter(username=username))
+            user = authenticate(username=username, password=password)
+            print("user = ", user)
+            if user:
+                user_serializer = UserSerializer(user)
+                user.save()
+                token = get_tokens_for_user(user)
+                response = user_serializer.data
+                response["token"] = token
+                response = {"data": response, "status": status.HTTP_200_OK}
+                return Response(response, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "message": "Invalid Email or Password",
+                    "status": status.HTTP_400_BAD_REQUEST,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TimeSlotApiView(APIView):
