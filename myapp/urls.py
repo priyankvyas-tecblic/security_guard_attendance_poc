@@ -1,6 +1,6 @@
 from django.urls import path,include
-from myapp.views import SecurityGurad
+from myapp.views import SecurityGuard, TimeSlotApiView
 urlpatterns = [
-
-    path('security',SecurityGurad.as_view())
+    path('security',SecurityGuard.as_view()),
+    path('time_slot',TimeSlotApiView.as_view())
 ]
