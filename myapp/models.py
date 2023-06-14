@@ -7,6 +7,7 @@ class SecurityAttendance(models.Model):
     check_in_time = models.TimeField()
     check_out_time = models.TimeField()
     created_at = models.DateField(auto_now_add=True)
+    is_checkin = models.BooleanField(default=True)
     is_checkout = models.BooleanField(default=False)
 
 
