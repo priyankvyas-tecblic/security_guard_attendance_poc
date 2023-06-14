@@ -4,8 +4,8 @@ from django.contrib.auth.models import User
 # Create your models here.
 class SecurityAttendance(models.Model):
     security_guard = models.ForeignKey(User, related_name='security_guard', on_delete=models.CASCADE)
-    check_in_time = models.TimeField()
-    check_out_time = models.TimeField()
+    check_in_time = models.TimeField(null=True,blank=True)
+    check_out_time = models.TimeField(null=True,blank=True)
     created_at = models.DateField(auto_now_add=True)
     is_checkin = models.BooleanField(default=True)
     is_checkout = models.BooleanField(default=False)
