@@ -10,8 +10,8 @@ from rest_framework.viewsets import ViewSet
 from django.contrib.auth import authenticate
 from myapp.utils import get_tokens_for_user
 from rest_framework import status
-from .serializers import LoginSerializer, UserSerializer
-from .models import User
+from .serializers import LoginSerializer, UserSerializer,AttendanceHistorySerializer,SecurityAttendanceSerializer
+from .models import User,SecurityAttendance,AttendanceHistory
 from django.contrib.auth.hashers import make_password
 
 load_dotenv()
@@ -75,3 +75,13 @@ class SecurityGuard(APIView):
         data = request.data
         data['security_guard'] = request.user
         return Response({"msg":"worked"}, status=HTTP_200_OK )
+    
+class AttendanceApi(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self,request):
+        data = request.data
+        user  = request.user
+        securityattendace = SecurityAttendance.objects.last(security_guard = user)
+        serializer = SecurityAttendanceSerializer(data =request.data)
+        return Response({"msg":"worked"}, status=HTTP_200_OK )
+    
