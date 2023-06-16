@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 # from rest_framework.viewsets import ViewSet
 from rest_framework.viewsets import ViewSet
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from django.db.models import F, Avg
 from django.contrib.auth import authenticate
 from myapp.utils import get_tokens_for_user
 from rest_framework import status
@@ -75,63 +75,65 @@ class TimeSlotApiView(APIView):
 
 class SecurityGuard(APIView):
     permission_classes = [IsAuthenticated]
-    def post(self,request):
-        data = request.data
-        data['security_guard'] = request.user
-        return Response({"msg":"worked"}, status=HTTP_200_OK )
+    def get(self,request):
+        data = SecurityAttendance.objects.filter(security_guard=request.user).aggregate(
+            working_hour=(
+                F('check_out_time') - F('check_in_time'),
+            )
+        )
+        print("data --->", data)
+        serializer = SecurityAttendanceSerializer(data, many=True)
+
+        return Response({"attendance":serializer.data}, status=HTTP_200_OK )
 
 class AttendanceApi(ViewSet):
     parser_classes = (MultiPartParser, FormParser, )
     permission_classes = [IsAuthenticated]
     def create(self,request):
-        data = request.data
-        user  = request.user
+        user = request.user
         securityattendace = SecurityAttendance.objects.filter(security_guard = user).last()
-        is_checkout = request.data.get("is_checkout",)
-        print("----------------------------------------")
-        
-        print("----------------------------------------")
-        if securityattendace is None:         
-            request.data["check_in_time"] = now().strftime("%H:%M:%S") 
+        is_checkout = request.data.get("is_checkout", False)
+
+        if securityattendace is None:
+            request.data["check_in_time"] = now().strftime("%H:%M:%S")
             request.data["security_guard"] = user.id
             request.data["is_checkin"] = True
-            
-            serializer = SecurityAttendanceSerializer(data =request.data)
+            serializer = SecurityAttendanceSerializer(data=request.data, context={'latitude':request.data['latitude'],
+                                                      'longitude':request.data['longitude']})
             if serializer.is_valid(raise_exception=True):
                 attendanceid = serializer.save()
             request.data["attendance_id"] = attendanceid.id
             serializer = AttendanceHistorySerializer(data =request.data)
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
-                
-            return Response({"msg":"worked"}, status=HTTP_200_OK )            
-        print("-----------~-----------------------------",securityattendace.is_checkin,securityattendace.is_checkout,is_checkout)
-        if  securityattendace.is_checkin  and securityattendace.is_checkout:
-            
+            return Response({"msg":"Checked In"}, status=HTTP_200_OK )
+
+        if securityattendace.is_checkin and securityattendace.is_checkout:
             request.data["check_in_time"] = now().strftime("%H:%M:%S")
             request.data["is_checkin"] = True
             request.data["security_guard"] = user.id
-            serializer = SecurityAttendanceSerializer(data =request.data)
+            serializer = SecurityAttendanceSerializer(data =request.data, context={'latitude':request.data['latitude'],
+                                                      'longitude':request.data['longitude']})
             if serializer.is_valid(raise_exception=True):
                 attendanceid = serializer.save()
             request.data["attendance_id"] = attendanceid.id
             serializer = AttendanceHistorySerializer(data =request.data)
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
-            return Response({"msg":"worked"}, status=HTTP_200_OK )
+            return Response({"msg":"Checked In"}, status=HTTP_200_OK )
+
         elif securityattendace.is_checkin == True and securityattendace.is_checkout == False and not is_checkout:
             request.data["attendance_id"] = securityattendace.id
-            print("----------------------------------------")
             serializer = AttendanceHistorySerializer(data =request.data)
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
-            return Response({"msg":"worked"}, status=HTTP_200_OK )
+            return Response({"msg":"Checked In"}, status=HTTP_200_OK )
                 
         elif securityattendace.is_checkin == True and securityattendace.is_checkout == False and is_checkout:
-            print("=====================================")
-            
             request.data["check_out_time"] = now().strftime("%H:%M:%S")
-            serializer = SecurityAttendanceSerializer(securityattendace,data =request.data,partial=True)
+            serializer = SecurityAttendanceSerializer(securityattendace, data=request.data, partial=True,
+                                                      context={'latitude':request.data['latitude'],
+                                                      'longitude':request.data['longitude']})
             if serializer.is_valid(raise_exception=True):
                 attendanceid = serializer.save()
             request.data["attendance_id"] = attendanceid.id
@@ -139,5 +141,5 @@ class AttendanceApi(ViewSet):
             serializer = AttendanceHistorySerializer(data =request.data)
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
-            return Response({"msg":"worked"}, status=HTTP_200_OK )            
+            return Response({"msg":"Checked Out"}, status=HTTP_200_OK )
         return Response({"msg":"not worked"}, status=HTTP_200_OK )            

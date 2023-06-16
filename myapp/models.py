@@ -10,6 +10,9 @@ class SecurityAttendance(models.Model):
     is_checkin = models.BooleanField(default=True)
     is_checkout = models.BooleanField(default=False)
 
+    def __str__(self):
+        return str(self.security_guard)
+
 
 class AttendanceHistory(models.Model):
     attendance_id = models.ForeignKey(SecurityAttendance, on_delete=models.CASCADE)
@@ -19,3 +22,6 @@ class AttendanceHistory(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.attendance_id)
